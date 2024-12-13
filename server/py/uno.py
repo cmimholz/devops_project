@@ -158,81 +158,143 @@ LIST_CARD: List[Card] = [
 
 class GameState(BaseModel):
     # numbers of cards for each player to start with
-    CNT_HAND_CARDS: int = 0
-    # any = for wild cards
-    list_card_draw: Optional[List[Card]] = field(
-        default_factory=create_deck
-        )  # list of cards to draw
-    list_card_discard: Optional[List[Card]] = field(
-        default_factory=list
-        )  # list of cards discarded
-    list_player: List[PlayerState] = field(
-        default_factory=list
-        )  # list of player-states
+    CNT_HAND_CARDS: int = 7
 
-    # the current game-phase ("setup"|"running"|"finished")
+    list_card_draw: Optional[List[Card]] = None  # list of cards to draw
+    list_card_discard: Optional[List[Card]] = None
+    list_player: Optional[List[PlayerState]] = None
     phase: GamePhase = GamePhase.SETUP
-    # number of players N (to be set in the phase "setup")
-    cnt_player: int = 0
-    # the index (0 to N-1) of active player
-    idx_player_active: Optional[int] = 0
-    # direction of the game, +1 to the left, -1 to right
-    direction: int = 1
-    # active color (last card played or the chosen color after a wild cards)
-    color: str = ''
-    # accumulated number of cards to draw for the next player
-    cnt_to_draw: int = 0
-    # flag to indicate if the last player has alreay drawn cards or not
+    cnt_player: int = -1
+    idx_player_active: Optional[int] = None
+    direction: int = NOT_SET_DIRECTION
+    color: str = ""
+    cnt_to_draw: int = NOT_SET_CNT_TO_DRAW
     has_drawn: bool = False
+    card_was_used: bool = False
 
-    def setup_game(self, players: List[str]) -> None:
-        """Initialize the game with players."""
-        self.list_player = [PlayerState(name=player) for player in players]
-        self.cnt_player = len(players)
-        self.list_card_draw = random.sample(
-            self.LIST_CARD, len(self.LIST_CARD)
-            )
-        self.phase = GamePhase.SETUP
-        self.deal_cards()
-    
+    def initialize(self) -> None:
+        if not self.list_card_draw:
+            self.initialize_list_card_draw()
+
+        if self.cnt_player == -1:
+            self.cnt_player = 2
+
+        if not self.list_player:
+            self.draw_card()
+
+        if not self.list_card_discard:
+            self.initialize_list_card_discard()
+
+        if self.list_card_discard is None:
+            raise ValueError()
+        top_card = self.list_card_discard[-1]
+
+        self.reverse_direction(top_card)
+
+        self.initialize_idx_player(top_card)
+
+        self.initialize_cnt_to_draw(top_card)
+
+        self.initialize_has_drawn()
+
+        self.phase = GamePhase.RUNNING
+
+    def initialize_has_drawn(self) -> None:
+        if self.has_drawn is None:
+            self.has_drawn = False
+
+
+    def initialize_cnt_to_draw(self, top_card: Card) -> None:
+        if self.cnt_to_draw == NOT_SET_CNT_TO_DRAW and top_card.symbol is None:
+            self.cnt_to_draw = 0
+        elif self.cnt_to_draw == NOT_SET_CNT_TO_DRAW and top_card.symbol is not None:
+            self.cnt_to_draw = 0
+            if top_card.symbol == "draw2":
+                self.cnt_to_draw = 2
+
+
+    def initialize_idx_player(self, top_card: Card) -> None:
+        if (self.idx_player_active is None) and (top_card.symbol is None):
+            self.idx_player_active = 0
+        elif (self.idx_player_active is None) and (top_card.symbol is not None):
+            self.idx_player_active = 0
+            if top_card.symbol == 'skip':
+                self.idx_player_active = (self.idx_player_active + self.direction) % self.cnt_player
+        elif (self.idx_player_active is not None) and (top_card.symbol is not None):
+            # self.idx_player_active = 0
+            if top_card.symbol == 'skip':
+                self.idx_player_active = (self.idx_player_active + self.direction) % self.cnt_player
+
+
+    def get_current_player(self) -> PlayerState:
+        if self.list_player is None or self.idx_player_active is None:
+            raise ValueError()
+        return self.list_player[self.idx_player_active]
+
+
     def deal_cards(self) -> None:
         """Deal cards to each player."""
-        for player in self.list_player:
-            for _ in range(self.CNT_HAND_CARDS):
-                card = self.list_card_draw.pop()
-                player.add_card(card)
+        if self.list_card_draw is None:
+            raise ValueError()
+        self.list_player = [PlayerState() for i in range(self.cnt_player)]
+        player: PlayerState
+        for i in range(self.CNT_HAND_CARDS):
+            for player in self.list_player:
+                player.list_card.append(self.list_card_draw.pop())
 
-        # Set initial discard card
-        self.list_card_discard.append(self.list_card_draw.pop())
-        self.color = self.list_card_discard[-1].color
+
+    def initialize_list_card_draw(self) -> None:
+        self.list_card_draw = LIST_CARD[:]
+        random.shuffle(self.list_card_draw)
+
 
     def next_player(self) -> None:
         """Advance to the next player."""
-        self.idx_player_active = (
-            self.idx_player_active + self.direction
-            ) % self.cnt_player
+        if self.idx_player_active is None:
+            raise ValueError()
+        self.idx_player_active = (self.idx_player_active + self.direction) % self.cnt_player
 
-    def reverse_direction(self) -> None:
-        """Reverse the direction of play."""
-        self.direction *= -1
 
-    def draw_card(self, player_idx: int, count: int = 1) -> None:
-        """Draw cards for a player."""
-        player = self.list_player[player_idx]
-        for _ in range(count):
-            if not self.list_card_draw:
-                self.reshuffle_discard_pile()
-            player.add_card(self.list_card_draw.pop())
-    
-    def reshuffle_discard_pile(self) -> None:
-        """Reshuffle the discard pile into the draw pile."""
-        if len(self.list_card_discard) <= 1:
-            raise ValueError(
-                "Not enough cards in the discard pile to reshuffle."
-                )
-        self.list_card_draw = self.list_card_discard[:-1]
-        random.shuffle(self.list_card_draw)
-        self.list_card_discard = [self.list_card_discard[-1]]
+    def reverse_direction(self, top_card: Card) -> None:
+        if self.direction == NOT_SET_DIRECTION and top_card.symbol is None:
+            self.direction = 1
+        elif self.direction == NOT_SET_DIRECTION and top_card.symbol is not None:
+            if top_card.symbol == 'reverse':
+                self.direction = -1
+            else:
+                self.direction = 1
+
+    def initialize_list_card_discard(self) -> None:
+        self.list_card_discard = []
+        while True:
+            if self.list_card_draw is None:
+                raise ValueError()
+            top_card = self.list_card_draw.pop()
+
+            if top_card.symbol == 'wilddraw4':
+                index = random.randint(0, len(self.list_card_draw))
+                self.list_card_draw.insert(index, top_card)
+                continue
+            if top_card.symbol == 'draw2':
+                self.cnt_to_draw = 2
+
+            self.list_card_discard.append(top_card)
+            self.color = top_card.color
+            break
+
+
+    def __str__(self) -> str:
+        if self.idx_player_active is None or self.list_card_discard is None or self.list_player is None:
+            raise ValueError()
+
+        return (f"(\n"
+                f"\tlist_card_discard={list(reversed(self.list_card_discard))}\n"
+                f"\ttop_card={repr(self.list_card_discard[-1])}\n"
+                f"\tcurrent_inx={self.idx_player_active}\n"
+                f"\tcurrent_player={self.list_player[self.idx_player_active]}\n"
+                f"\tnext_player={self.list_player[(self.idx_player_active + self.direction) % self.cnt_player]}\n"
+                f"\tcurrent_color={self.color}\n"
+                f")")
 
 class Uno(Game):
 
@@ -241,49 +303,16 @@ class Uno(Game):
         set_state call to set the number of players """
         self.state = GameState()
 
-    def set_state(self, state: GameState) -> None:
-        """ Set the game to a given state """
-        self.state = state
-
-        if len(self.state.list_player) != self.state.cnt_player:
-            self.state.list_player = [
-                PlayerState() for i in range(state.cnt_player)
-            ]
-
-        self.state.idx_player_active = state.idx_player_active
-        active_player = self.state.list_player[self.state.idx_player_active]
-        self.state.direction = 1
-        if len(self.state.list_card_discard) == 0:
-            self.state.list_card_discard = [
-                state.list_card_draw.pop()
-                ] if state.list_card_draw else []
-
-
-
-        top_card = self.state.list_card_discard[-1]
-        if top_card.symbol == 'draw2':
-            self.state.cnt_to_draw += 2
-        if top_card.symbol == 'wilddraw4' and len(
-            self.state.list_card_discard
-            ) == 1:
-
-            self.state.list_card_discard.append(state.list_card_draw.pop())
-        if top_card.symbol == 'reverse':
-            self.state.direction *= -1
-        if top_card.symbol == 'skip':  # check this <<<<<==
-            self.state.idx_player_active += 1
-            self.state.idx_player_active %= self.state.cnt_player
-
-        for i in range(self.state.CNT_HAND_CARDS):
-            for player in self.state.list_player:
-                player.list_card.append(state.list_card_draw.pop())
-
-        self.state.phase = GamePhase.RUNNING
-
     def get_state(self) -> GameState:
         """ Get the complete, unmasked game state """
         return self.state
 
+    def set_state(self, input_state: GameState) -> None:
+        """ Set the game to a given state """
+        self.state = input_state
+
+        if self.state.phase == GamePhase.SETUP:
+            self.state.initialize()
 
     def get_list_action(self) -> List[Action]:
         """ Get a list of possible actions for the active player """
