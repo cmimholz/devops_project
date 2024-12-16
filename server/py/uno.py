@@ -1,30 +1,10 @@
 import random
 from enum import Enum
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Union
 
 from pydantic import BaseModel, Field
 
 from server.py.game import Game, Player
-
-
-def compare_tuples_for_lt(t1:tuple, t2:tuple) -> bool:
-    """ Compares two tuples element-wise for less-than ordering.
-    Handles 'None' values as less than any other
-    """
-    for v1, v2 in zip(t1, t2):
-        if v1 is None and v2 is None:
-            continue
-
-        if v1 is None:
-            return True
-        if v2 is None:
-            return False
-        if v1 < v2:
-            return True
-        if v1 > v2:
-            return False
-
-    return False
 
 
 class Card(BaseModel):
@@ -32,15 +12,31 @@ class Card(BaseModel):
     number: Optional[int] = None  # number of the card (if not a symbol card)
     symbol: Optional[str] = None  # special cards (see LIST_SYMBOL)
 
-    def __lt__(self, other):
-        """ This method checks if one Card object is less than another,
-        using the global method compare_tuples_for_lt()
-        """
+    def __lt__(self, other: Union['Card', Any]) -> bool:
+        """ Method checks if one Card object is less than another one,
+                uses the global method lt()
+                """
         if not isinstance(other, Card):
             return False
-        t1 = (self.color, self.number, self.symbol)
-        t2 = (other.color, other.number, other.symbol)
-        return compare_tuples_for_lt(t1, t2)
+
+        t1 = (self.color, self.number, self.symbol,)
+        t2 = (other.color, other.number, other.symbol,)
+        v1: Any
+        v2: Any
+        for v1, v2 in zip(t1, t2):
+            if v1 is None and v2 is None:
+                continue
+
+            if v1 is None:
+                return True
+
+            if v2 is None:
+                return False
+
+            if v1 < v2:
+                return True
+
+        return False
 
     def __eq__(self, other:Any)-> bool:
         """ Checks to see if two Card objects are equal
@@ -59,13 +55,28 @@ class Action(BaseModel):
     draw: Optional[int] = None   # number of cards to draw for the next player
     uno: bool = False            # announce "UNO" with the second last card
 
-    def __lt__(self, other):
-        """ Method checks if one Action object is less than another one,
-        uses the global method ocmpare_tuples_for_lt()
-        """
-        t1 = (self.card, self.color, self.draw, self.uno)
-        t2 = (other.card, other.color, other.draw, other.uno)
-        return compare_tuples_for_lt(t1, t2)
+    def __lt__(self, other: Union['Action', Any]) -> bool:
+        if not isinstance(other, Action):
+            return False
+
+        t1: tuple[Card | None, str | None, int | None, bool] = (self.card, self.color, self.draw, self.uno,)
+        t2: tuple[Card | None, str | None, int | None, bool] = (other.card, other.color, other.draw, other.uno,)
+        v1: Any
+        v2: Any
+        for v1, v2 in zip(t1, t2):
+            if v1 is None and v2 is None:
+                continue
+
+            if v1 is None:
+                return True
+
+            if v2 is None:
+                return False
+
+            if v1 < v2:
+                return True
+
+        return False
 
 class PlayerState(BaseModel):
     name: Optional[str] = None  # name of player
@@ -304,9 +315,9 @@ class Uno(Game):
         """ Get the complete, unmasked game state """
         return self.state
 
-    def set_state(self, input_state: GameState) -> None:
+    def set_state(self, state: GameState) -> None:
         """ Set the game to a given state """
-        self.state = input_state
+        self.state = state
 
         if self.state.phase == GamePhase.SETUP:
             self.state.initialize()
@@ -481,15 +492,6 @@ class Uno(Game):
         print(f"Has Drawn: {'Yes' if self.state.has_drawn else 'No'}")
 
         print("\n-- Players --")
-        for idx, player in enumerate(self.state.list_player):
-            active_marker = (
-                " (Active)" if idx == self.state.idx_player_active else ""
-            )
-            print(f"Player {idx + 1}{active_marker}: {player.name}")
-            print(f"  Cards: {[str(card) for card in player.list_card]}")
-
-        print("\n-- Draw Pile --")
-        print(f"Cards remaining: {len(self.state.list_card_draw)}")
 
         print("\n-- Discard Pile --")
         if self.state.list_card_discard:
@@ -500,41 +502,11 @@ class Uno(Game):
         print("====================\n")
 
     def get_player_view(self, idx_player: int) -> GameState:
-        """ Get the masked state for the active player 
-        (e.g. the oppontent's cards are face down)"""
-        if not self.state:
-            raise ValueError("Game state has not been initialized")
-
-        # clone current state to create masked view
-        masked_state = self.state.copy(deep=True)
-
-        # Mask the cards of all other players
-        for i, player in enumerate(masked_state.list_player):
-            if i != idx_player:
-                # replace the list of cards with a
-                # placeholder showing card count
-                player.list_card = [
-                    Card() for _ in range(len(player.list_card))
-                    ]
-
-        # reveal current player's hand
-        masked_state.list_player[
-            idx_player
-            ].list_card = self.state.list_player[idx_player].list_card
-
-        # mask draw pile (size can be revealed but not cards)
-        masked_state.list_card_draw = [
-            Card() * len(self.state.list_card_draw)
-            ]
-
-        # return masked state
-        return masked_state
+        """ Get the masked state for the active player (e.g. the oppontent's cards are face down)"""
+        return GameState(cnt_player=idx_player)
 
 
 class RandomPlayer(Player):
-    def __init__(self, name: str = "Player") -> None:
-        self.state=PlayerState(name= name)
-
     def select_action(self, game_state: GameState, actions: List[Action]) -> Optional[Action]:
         """ Given masked game state and possible actions, select the next action """
         if len(actions) > 0 and game_state:
