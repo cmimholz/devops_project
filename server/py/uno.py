@@ -180,7 +180,7 @@ class GameState(BaseModel):
             self.cnt_player = 2
 
         if not self.list_player:
-            self.draw_card()
+            self.deal_cards()
 
         if not self.list_card_discard:
             self.initialize_list_card_discard()
@@ -347,20 +347,12 @@ class Uno(Game):
 
         return actions
 
-    def check_with_simple_cards(self, player_state: PlayerState, top_card: Card) -> bool:
-        has_color_card = False
-        for card in player_state.list_card:
-            if card.symbol not in ['wild', 'wilddraw4']:
-                if card.color == self.state.color or card.number == top_card.number:
-                    has_color_card = True
-        return has_color_card
-
     def _get_list_action_not_specific(self, top_card: Card) -> List[Action]:
         player_state = self.state.get_current_player()
         actions = []
         if not self.state.has_drawn:
             actions.append(Action(draw=self.state.cnt_to_draw or 1))
-        has_color_full_card = self.check_can_we_move_with_simple_cards(player_state, top_card)
+        has_color_full_card = self.check_with_simple_cards(player_state, top_card)
         for card in player_state.list_card:
             if card.symbol not in ['wild', 'wilddraw4', 'draw2']:
                 if card.color == self.state.color or card.number == top_card.number:
@@ -442,8 +434,6 @@ class Uno(Game):
         for card in player_state.list_card:
             if card.symbol == 'skip':
                 actions.append(Action(card=card, color=card.color))
-            elif card.symbol == 'reverse' and card.color == top_card.color:
-                actions.append(Action(card=card, color=card.color))
             elif card.symbol == 'draw2' and card.color == top_card.color:
                 actions.append(Action(card=card, color=card.color, draw=2))
 
@@ -456,22 +446,31 @@ class Uno(Game):
                 raise ValueError
             player.list_card.extend([self.state.list_card_draw.pop() for _ in range(4)])
 
+        if action.card is None and action.draw != 0:
+            player = self.state.get_current_player()
+            if action.draw is None or self.state.list_card_draw is None:
+                raise ValueError
+            player.list_card.extend([self.state.list_card_draw.pop() for _ in range(action.draw)])
+            self.state.has_drawn = True
+            self.state.cnt_to_draw = 0
+            return
+
+        if action.card is not None:
+            if self.state.list_card_draw is None:
+                raise ValueError
+            self.state.list_card_draw.append(action.card)
+            player.list_card.remove(action.card)
+            self.state.cnt_to_draw = action.draw or 0
+            if action.card.symbol == 'skip':
+                self.state.next_player()
+
+            if len(player.list_card) == 0:
+                self.state.phase = GamePhase.FINISHED
+                return
+
+        self.state.next_player()
 
 
-
-        # if not self.state: # in case game state has not been initialized
-        #     raise ValueError("Game state has not been initialized")
-        #
-        # active_player = self.state.list_player[self.state.idx_player_active]
-        #
-        # if action.draw and not self.state.has_drawn:
-        #     self.state.has_drawn = True
-        #     card = self.state.list_card_draw.pop()
-        #     active_player.add_card(card)
-        #
-        # # Do not advance the turn if only drawing
-        #     return
-        #
     def print_state(self) -> None:
         """ Print the current game state fo debbuging"""
         if not self.state:
