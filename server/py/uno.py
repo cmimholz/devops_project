@@ -368,8 +368,25 @@ class Uno(Game):
             elif card.symbol == 'wild':
                 for color in LIST_COLOR[:-1]:
                     actions.append(Action(card=card, color=color, draw=None))
+            elif card.symbol == 'wilddraw4':
+                if not has_color_full_card:
+                    for color in LIST_COLOR[:-1]:
+                        actions.append(Action(card=card, color=color, draw=4))
+            elif card.symbol == 'draw2':
+                actions.append(Action(card=card, color='any', draw=2))
+            else:
+                raise ValueError("Unsupported symbol")
 
         return actions
+
+    def check_with_simple_cards(self, player_state: PlayerState, top_card: Card) -> bool:
+        has_color_card = False
+        for card in player_state.list_card:
+            if card.symbol not in ['wild', 'wilddraw4']:
+                if card.color == self.state.color or card.number == top_card.number:
+                    has_color_card = True
+
+        return has_color_card
 
 
     def print_state(self) -> None:
