@@ -535,32 +535,14 @@ class RandomPlayer(Player):
     def __init__(self, name: str = "Player") -> None:
         self.state=PlayerState(name= name)
 
-    def select_action(self, state: GameState,
-                actions: List[Action]) -> Optional[Action]:
-        """ Given masked game state and possible actions,
-        select the next action """
-        if not actions:
-            print(f"""{self.state.name} hase no valid actions
-            to undertake and must wither draw or skip.""")
+    def select_action(self, game_state: GameState, actions: List[Action]) -> Optional[Action]:
+        """ Given masked game state and possible actions, select the next action """
+        if len(actions) > 0 and game_state:
+            return random.choice(actions)
+        return None
 
-        action = random.choice(actions) # randomly chooses an action
-
-        # wildcard case action
-        if (action.card and
-        action.card.symbol in ["wild", "wildcard4"]):
-            action.color = random.choice(
-                state.LIST_COLOR[:-1]) # chooses a color not 'any'
-
-        # UNO case action
-        if len(self.state.list_card)==1:
-            action.uno=True
-            print(f"{self.state.name} UNO. Game won! ")
-
-
-        #if len(actions) > 0:
-        #    return random.choice(actions)
-        return action
-
+    def game_is_running(self) -> bool:
+        return True
 
 if __name__ == '__main__':
 
