@@ -330,6 +330,32 @@ class Uno(Game):
 
         return actions
 
+    def check_with_simple_cards(self, player_state: PlayerState, top_card: Card) -> bool:
+        has_color_card = False
+        for card in player_state.list_card:
+            if card.symbol not in ['wild', 'wilddraw4']:
+                if card.color == self.state.color or card.number == top_card.number:
+                    has_color_card = True
+        return has_color_card
+
+    def _get_list_action_not_specific(self, top_card: Card) -> List[Action]:
+        player_state = self.state.get_current_player()
+        actions = []
+
+        if not self.state.has_drawn:
+            actions.append(Action(draw=self.state.cnt_to_draw or 1))
+
+        has_color_full_card = self.check_can_we_move_with_simple_cards(player_state, top_card)
+
+        for card in player_state.list_card:
+            if card.symbol not in ['wild', 'wilddraw4', 'draw2']:
+                if card.color == self.state.color or card.number == top_card.number:
+                    actions.append(Action(card=card, color=card.color))
+            elif card.symbol == 'wild':
+                for color in LIST_COLOR[:-1]:
+                    actions.append(Action(card=card, color=color, draw=None))
+
+        return actions
 
     def print_state(self) -> None:
         """ Print the current game state fo debbuging"""
