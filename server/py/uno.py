@@ -415,10 +415,6 @@ class Uno(Game):
         for card in player_state.list_card:
             if card.symbol == 'draw2':
                 actions.append(Action(card=card, color=card.color, draw=self.state.cnt_to_draw + 2))
-            elif card.symbol == 'skip' and card.color == top_card.color:
-                actions.append(Action(card=card, color=card.color))
-            elif card.symbol == 'reverse' and card.color == top_card.color:
-                actions.append(Action(card=card, color=card.color))
 
     def _get_list_action_specific_reverse(self, actions: List[Action], player_state: PlayerState,
                                           top_card: Card) -> None:
@@ -427,8 +423,7 @@ class Uno(Game):
                 actions.append(Action(card=card, color=card.color))
             elif card.symbol == 'skip' and card.color == top_card.color:
                 actions.append(Action(card=card, color=card.color))
-            elif card.symbol == 'draw2' and card.color == top_card.color:
-                actions.append(Action(card=card, color=card.color, draw=2))
+
 
     def _get_list_action_specific_skip(self, actions: List[Action], player_state: PlayerState, top_card: Card) -> None:
         for card in player_state.list_card:
