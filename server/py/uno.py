@@ -1,6 +1,6 @@
 import random
 from enum import Enum
-from typing import List, Optional, Any, Union
+from typing import List, Optional, Any
 
 from pydantic import BaseModel, Field
 
@@ -17,13 +17,10 @@ def compare_tuples_for_lt(t1:tuple, t2:tuple) -> bool:
 
         if v1 is None:
             return True
-
         if v2 is None:
             return False
-            
         if v1 < v2:
             return True
-
         if v1 > v2:
             return False
 
@@ -513,8 +510,8 @@ class Uno(Game):
 
         # Mask the cards of all other players
         for i, player in enumerate(masked_state.list_player):
-            if i != idx.player:
-                # replace the list of cards with a 
+            if i != idx_player:
+                # replace the list of cards with a
                 # placeholder showing card count
                 player.list_card = [
                     Card() for _ in range(len(player.list_card))
@@ -543,13 +540,13 @@ class RandomPlayer(Player):
         """ Given masked game state and possible actions,
         select the next action """
         if not actions:
-            print(f"""{self.state.name} hase no valid actions 
+            print(f"""{self.state.name} hase no valid actions
             to undertake and must wither draw or skip.""")
 
         action = random.choice(actions) # randomly chooses an action
 
         # wildcard case action
-        if (action.card and 
+        if (action.card and
         action.card.symbol in ["wild", "wildcard4"]):
             action.color = random.choice(
                 state.LIST_COLOR[:-1]) # chooses a color not 'any'
@@ -570,4 +567,3 @@ if __name__ == '__main__':
     uno = Uno()
     state = GameState(cnt_player=3)
     uno.set_state(state)
-
