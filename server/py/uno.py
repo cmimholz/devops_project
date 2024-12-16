@@ -388,6 +388,40 @@ class Uno(Game):
 
         return has_color_card
 
+    def _get_list_action_specific_wild(self, actions: List[Action], player_state: PlayerState, top_card: Card) -> None:
+        actions.pop()
+        for card in player_state.list_card:
+            if top_card.color in [card.color, "any", ]:
+                if card.symbol is None:
+                    actions.append(Action(card=card, color=card.color))
+
+    def _get_list_action_specific_draw2(self, actions: List[Action], player_state: PlayerState, top_card: Card) -> None:
+        for card in player_state.list_card:
+            if card.symbol == 'draw2':
+                actions.append(Action(card=card, color=card.color, draw=self.state.cnt_to_draw + 2))
+            elif card.symbol == 'skip' and card.color == top_card.color:
+                actions.append(Action(card=card, color=card.color))
+            elif card.symbol == 'reverse' and card.color == top_card.color:
+                actions.append(Action(card=card, color=card.color))
+
+    def _get_list_action_specific_reverse(self, actions: List[Action], player_state: PlayerState,
+                                          top_card: Card) -> None:
+        for card in player_state.list_card:
+            if card.symbol == 'reverse':
+                actions.append(Action(card=card, color=card.color))
+            elif card.symbol == 'skip' and card.color == top_card.color:
+                actions.append(Action(card=card, color=card.color))
+            elif card.symbol == 'draw2' and card.color == top_card.color:
+                actions.append(Action(card=card, color=card.color, draw=2))
+
+    def _get_list_action_specific_skip(self, actions: List[Action], player_state: PlayerState, top_card: Card) -> None:
+        for card in player_state.list_card:
+            if card.symbol == 'skip':
+                actions.append(Action(card=card, color=card.color))
+            elif card.symbol == 'reverse' and card.color == top_card.color:
+                actions.append(Action(card=card, color=card.color))
+            elif card.symbol == 'draw2' and card.color == top_card.color:
+                actions.append(Action(card=card, color=card.color, draw=2))
 
     def print_state(self) -> None:
         """ Print the current game state fo debbuging"""
