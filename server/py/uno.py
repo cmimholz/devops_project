@@ -388,6 +388,30 @@ class Uno(Game):
 
         return has_color_card
 
+    def _get_list_action_specific(self, top_card: Card) -> List[Action]:
+        player_state = self.state.get_current_player()
+        actions = []
+
+        if not self.state.has_drawn:
+            actions.append(Action(draw=self.state.cnt_to_draw or 1))
+
+        if top_card.symbol == 'skip':
+            self._get_list_action_specific_skip(actions, player_state, top_card)
+
+        if top_card.symbol == 'reverse':
+            self._get_list_action_specific_reverse(actions, player_state, top_card)
+
+        if top_card.symbol == 'draw2':
+            self._get_list_action_specific_draw2(actions, player_state, top_card)
+
+        if top_card.symbol == 'wild':
+            self._get_list_action_specific_wild(actions, player_state, top_card)
+
+        if top_card.symbol == 'wilddraw4':
+            pass
+
+        return actions
+
     def _get_list_action_specific_wild(self, actions: List[Action], player_state: PlayerState, top_card: Card) -> None:
         actions.pop()
         for card in player_state.list_card:
@@ -423,6 +447,31 @@ class Uno(Game):
             elif card.symbol == 'draw2' and card.color == top_card.color:
                 actions.append(Action(card=card, color=card.color, draw=2))
 
+    def apply_action(self, action: Action) -> None:
+        """ Apply the given action to the game """
+
+        player = self.state.get_current_player()
+        if len(player.list_card) == 2 and not action.uno and action.card is not None:
+            if self.state.list_card_draw is None:
+                raise ValueError
+            player.list_card.extend([self.state.list_card_draw.pop() for _ in range(4)])
+
+
+
+
+        # if not self.state: # in case game state has not been initialized
+        #     raise ValueError("Game state has not been initialized")
+        #
+        # active_player = self.state.list_player[self.state.idx_player_active]
+        #
+        # if action.draw and not self.state.has_drawn:
+        #     self.state.has_drawn = True
+        #     card = self.state.list_card_draw.pop()
+        #     active_player.add_card(card)
+        #
+        # # Do not advance the turn if only drawing
+        #     return
+        #
     def print_state(self) -> None:
         """ Print the current game state fo debbuging"""
         if not self.state:
@@ -457,97 +506,6 @@ class Uno(Game):
             print("Discard pile is empty.")
 
         print("====================\n")
-
-
-
-    def apply_action(self, action: Action) -> None:
-        """ Apply the given action to the game """
-        if not self.state: # in case game state has not been initialized
-            raise ValueError("Game state has not been initialized")
-
-        active_player = self.state.list_player[self.state.idx_player_active]
-
-        if action.draw and not self.state.has_drawn:
-            self.state.has_drawn = True
-            card = self.state.list_card_draw.pop()
-            active_player.add_card(card)
-
-        # Do not advance the turn if only drawing
-            return
-
-        # Case 1: Play a card
-        if action.card:
-            if action.card not in active_player.list_card:
-                raise ValueError("Player cannot play a card they don't have")
-
-            # Remove card from player hand
-            active_player.list_card.remove(action.card)
-
-            # Add card to discard pile
-            self.state.list_card_discard.append(action.card)
-
-            # Update the active color (for wildcards)
-            if action.card.symbol in ['wild', 'wilddraw4']:
-                if not action.color:
-                    raise ValueError(
-                        "A color must be chosen when playing a wildcard"
-                        )
-                self.state.color = action.color
-            else:
-                self.state.color = action.card.color
-
-            # Handle special card effects
-            if action.card.symbol == 'skip':
-                self._skip_next_player()
-            elif action.card.symbol == 'reverse':
-                self._reverse_direction()
-            elif action.card.symbol == 'draw2':
-                self.state.cnt_to_draw += 2
-            elif action.card.symbol == 'wilddraw4':
-                self.state.cnt_to_draw += 4
-
-            # Validate UNO call
-            if len(active_player.list_card) == 1 and not action.uno:
-                print(f"Player {active.player.name} failed to call UNO!")
-
-        #elif action.draw:
-        #    self._draw_cards(self.state.idx_player_active, action.draw)
-
-        # Move to the next player
-        self._advance_to_next_player()
-
-    def _skip_next_player(self) -> None:
-        """Skip the next player's turn"""
-        self._advance_to_next_player()
-
-    def _reverse_direction(self) -> None:
-        """Reverse direction of play"""
-        self.state.direction *= -1
-
-    def _draw_cards(self, player_index:int, count:int) -> None:
-        """Draw cards from the draw pile and add to player's hand"""
-        player = self.state.list_player[player_index]
-        for _ in range(count):
-            if not self.state.list_card_discard:
-                # reshuffle discard pile into draw pile if empty
-                self._reshuffle_discard_pile()
-            player.list_card.append(self.state.list_card_draw.pop())
-
-    def _reshuffle_discard_pile(self) -> None:
-        """Reshuffle the discard pile into the draw pile"""
-        if len(self.state.list_card_discard) <= 1:
-            raise ValueError("Not enough cards to reshuffle")
-        self.state.list_card_draw = self.state.list_card_discard[:-1]
-        random.shuffle(self.state.list_card_draw)
-        self.state.list_card_discard = [self.state.list_card_discard[-1]]
-
-    def _advance_to_next_player(self) -> None:
-        """Advance to the next player in the correct direction"""
-        self.state.idx_player_active = (
-            self.state.idx_player_active + self.state.direction %
-            self.state.cnt_player
-            )
-
 
     def get_player_view(self, idx_player: int) -> GameState:
         """ Get the masked state for the active player 
