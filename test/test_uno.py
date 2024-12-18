@@ -5,18 +5,18 @@ from server.py.uno import GameState, GamePhase, Uno, LIST_CARD, PlayerState, Car
 # Add the root project directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-
+# Test for creating a new GameState instance
 def test_create():
     game_state = GameState()
     assert game_state.phase == GamePhase.SETUP
 
-
+# Test for initializing the game state
 def test_initialize():
     game_state = GameState()
     game_state.initialize()
     assert game_state.phase == GamePhase.RUNNING
 
-
+# Test for creating and initializing a game
 def test_create_game():
     game = Uno()
     init_state = GameState()
@@ -25,7 +25,7 @@ def test_create_game():
     state = game.get_state()
     assert state.phase == GamePhase.RUNNING
 
-
+# Test for moving one card and validating the actions available
 def test_move_one_card():
     game = Uno()
     init_state = GameState(
@@ -51,6 +51,7 @@ def test_move_one_card():
 
     game.set_state(init_state)
 
+    # Expected actions for the first player's turn
     expected_actions = [
         Action(card=None, color=None, draw=1, uno=False),
         Action(card=Card(color='red', number=3, symbol=None), color='red'),
@@ -58,7 +59,7 @@ def test_move_one_card():
 
     assert sorted(expected_actions) == sorted(game.get_list_action())
 
-
+# Test for a player having all special cards and the actions available
 def test_have_all_special_card():
     game = Uno()
     init_state = GameState(
@@ -85,6 +86,8 @@ def test_have_all_special_card():
     )
 
     game.set_state(init_state)
+
+    # Actions corresponding to the special cards in hand
     expected_actions = [
         Action(card=None, color=None, draw=1, uno=False),
         Action(card=Card(color='red', number=None, symbol='draw2'), color='any', draw=2, uno=False),
@@ -100,7 +103,7 @@ def test_have_all_special_card():
 
     assert sorted(expected_actions) == sorted(game.get_list_action())
 
-
+# Test for each special card (skip, reverse, draw2, wild, wilddraw4)
 def test_all_special_card():
     top_card_actions = [
         (
@@ -158,7 +161,7 @@ def test_all_special_card():
 
         assert sorted(expected_actions) == sorted(game.get_list_action())
 
-
+# Define test cases for top cards (skip, reverse, draw2) and their expected actions
 def test_skip_reverse_draw2():
     top_card_actions = [
         (
@@ -211,9 +214,10 @@ def test_skip_reverse_draw2():
         print(top_card)
         print(game.get_list_action())
 
+        # Assert that the expected actions match the actual actions in the game
         assert sorted(expected_actions) == sorted(game.get_list_action())
 
-
+# Additional tests for applying cards and Uno behavior
 def test_apply_one_card():
     game = Uno()
     init_state = GameState(
@@ -250,7 +254,7 @@ def test_apply_one_card():
 
     assert len(init_state.list_player[0].list_card) == 4
 
-
+# Ensure calling Uno applies the rule correctly
 def test_apply_one_uno():
     game = Uno()
     init_state = GameState(
