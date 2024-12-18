@@ -477,11 +477,10 @@ class Uno(Game):
 
 
     def print_state(self) -> None:
-        """ Print the current game state fo debbuging"""
+        """ Print the current game state for debbuging"""
         if not self.state:
             print("Game state has not been initialized")
             return
-
         print("\n==== Game State ====")
         print(f"Phase: {self.state.phase}")
         print(f"""Direction: {
@@ -491,15 +490,12 @@ class Uno(Game):
         print(f"Active Color: {self.state.color}")
         print(f"Cards to Draw: {self.state.cnt_to_draw}")
         print(f"Has Drawn: {'Yes' if self.state.has_drawn else 'No'}")
-
         print("\n-- Players --")
-
         print("\n-- Discard Pile --")
         if self.state.list_card_discard:
             print(f"Top Card: {self.state.list_card_discard[-1]}")
         else:
             print("Discard pile is empty.")
-
         print("====================\n")
 
     def get_player_view(self, idx_player: int) -> GameState:
