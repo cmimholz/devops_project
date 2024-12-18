@@ -1,9 +1,7 @@
 import random
 from enum import Enum
 from typing import List, Optional, Any, Union
-
 from pydantic import BaseModel, Field
-
 from server.py.game import Game, Player
 
 
@@ -82,7 +80,7 @@ class PlayerState(BaseModel):
     name: Optional[str] = None  # name of player
     list_card: List[Card] = Field(default_factory=list)  # list of cards
 
-    def __str__(self) -> str:       #debug function
+    def __str__(self) -> str:   #debug function
         tabs = '\n\t\t\t'
         return (f"\tPlayer(\n"
                 f"\t\tlist_card=\n\t\t\t{tabs.join(map(repr, self.list_card))}"
@@ -264,6 +262,9 @@ class GameState(BaseModel):
 
 
     def reverse_direction(self, top_card: Card) -> None:
+        """
+        Sets the game direction based on the `top_card` symbol if the direction is not yet set.
+        """
         if self.direction == NOT_SET_DIRECTION and top_card.symbol is None:
             self.direction = 1
         elif self.direction == NOT_SET_DIRECTION and top_card.symbol is not None:
