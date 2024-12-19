@@ -6,15 +6,23 @@ from server.py.game import Game, Player
 
 
 class Card(BaseModel):
-    """Represents a single UNO card."""
+    """
+    Represents a single UNO card.
+    
+    This class holds the color, number, and symbol of a UNO card.
+    """
     color: str = ""               # color of the card (see LIST_COLOR)
     number: Optional[int] = None  # number of the card (if not a symbol card)
     symbol: Optional[str] = None  # special cards (see LIST_SYMBOL)
 
     def __lt__(self, other: Union['Card', Any]) -> bool:
-        """ Method checks if one Card object is less than another one,
-                uses the global method lt()
-                """
+        """
+        Check if this Card object is less than another Card object.
+
+        The comparison is done by comparing the color, number, and symbol 
+        of both cards in sequence. If one card has None in a field where 
+        the other has a value, the card with None is considered smaller.
+        """
         if not isinstance(other, Card):
             return False
 
@@ -38,7 +46,10 @@ class Card(BaseModel):
         return False
 
     def __eq__(self, other:Any)-> bool:
-        """ Checks to see if two Card objects are equal
+        """
+        Check if two Card objects are equal.
+
+        Equality is determined by comparing their color, number, and symbol.
         """
         if not isinstance(other, Card):
             return False
@@ -49,16 +60,21 @@ class Card(BaseModel):
         return t1 == t2
 
 class Action(BaseModel):
-    """Represents an action a player can take."""
+    """
+    Represents an action a player can take.
+
+    An action may involve playing a card, choosing a color, drawing cards for the next player, 
+    and announcing "UNO" if the player is about to go down to their last card.
+    """
     card: Optional[Card] = None  # the card to play
     color: Optional[str] = None  # the chosen color to play (for wild cards)
     draw: Optional[int] = None   # number of cards to draw for the next player
     uno: bool = False            # announce "UNO" with the second last card
 
     def __lt__(self, other: Union['Action', Any]) -> bool:
-        """ Method checks if one Card object is less than another one,
-                uses global method lt()
-                """
+        """
+        Method checks if one Card object is less than another one, uses global method lt().
+        """
         if not isinstance(other, Action):
             return False
 
@@ -82,14 +98,23 @@ class Action(BaseModel):
         return False
 
 class PlayerState(BaseModel):
-    """Represents the state of a single UNO player."""
+    """
+    Represents the state of a single UNO player.
+
+    Contains the player's name, the list of cards they hold, their current score, 
+    and the last action they performed.
+    """
+
     name: Optional[str] = None  # name of player
     list_card: List[Card] = Field(default_factory=list)  # list of cards
     score: int =0 # extended attribute
     last_action: Optional[Action]=None #extended attribute    
 
     def __str__(self) -> str:  #debug function
-        """Return a debug string representtaion of the PlayerState."""
+        """
+        Return a debug string representtaion of the PlayerState.
+        The string displays the player's cards, score, and the last action performed.
+        """
         tabs = '\n\t\t\t'
         return (f"\tPlayer(\n"
                 f"\t\tlist_card=\n\t\t\t{tabs.join(map(repr, self.list_card))}"
@@ -99,17 +124,43 @@ class PlayerState(BaseModel):
 
 
 class GamePhase(str, Enum):
-    """Enumerates the different phases of the game."""
+    """Enumerates the different phases of the game.
+    """
     SETUP = 'setup'            # before the game has started
     RUNNING = 'running'        # while the game is running
     FINISHED = 'finished'      # when the game is finished
 
 NOT_SET_DIRECTION = -10
+"""An integer constant indicating that the playing direction has not yet been set."""
+
 NOT_SET_CNT_TO_DRAW = -10
+"""An integer constant indicating that the number of cards to draw is not set."""
 
 LIST_COLOR: List[str] = ['red', 'green', 'yellow', 'blue', 'any']
+"""
+A list of valid UNO card colors.
+
+Order:
+- red
+- green
+- yellow
+- blue
+- any (used for wild cards)
+"""
+
 # draw2 = draw two cards, wild = chose color, wilddraw4 = chose color and draw 4
 LIST_SYMBOL: List[str] = ['skip', 'reverse', 'draw2', 'wild', 'wilddraw4']
+"""
+A list of special symbols representing non-numbered UNO cards.
+
+Includes:
+- skip: skip the next player's turn
+- reverse: reverse the playing direction
+- draw2: next player must draw two cards
+- wild: current player chooses the next color to play
+- wilddraw4: current player chooses the next color, and next player draws four cards
+"""
+
 LIST_CARD: List[Card] = [
     Card(color='red', number=0), Card(color='green', number=0), Card(color='yellow', number=0),
     Card(color='blue', number=0),
@@ -173,10 +224,19 @@ LIST_CARD: List[Card] = [
     Card(color='any', symbol='wilddraw4'), Card(color='any', symbol='wilddraw4'),
     Card(color='any', symbol='wilddraw4'), Card(color='any', symbol='wilddraw4'),
 ]
+"""
+A comprehensive list representing a standard UNO deck of cards.
+
+- Contains all number cards from 0-9 in four colors (red, green, yellow, blue).
+- Includes duplicates to match a standard UNO deck composition.
+- Contains special cards: skip, reverse, draw2 (for each color),
+  and wild, wilddraw4 (color 'any').
+"""
 
 class GameState(BaseModel):
     """Represents the overall state of the UNO game, including decks,
     discard piles, players, and the current game phase.
+    
     """
     # numbers of cards for each player to start with
     CNT_HAND_CARDS: int = 7
@@ -270,6 +330,7 @@ class GameState(BaseModel):
 
 
     def initialize_list_card_draw(self) -> None:
+        """Initialize the draw pile with shuffled cards."""
         self.list_card_draw = LIST_CARD[:]
         random.shuffle(self.list_card_draw)
 
@@ -282,9 +343,7 @@ class GameState(BaseModel):
 
 
     def reverse_direction(self, top_card: Card) -> None:
-        """
-        Sets the game direction based on the `top_card` symbol if the direction is not yet set.
-        """
+        """Sets the game direction based on the `top_card` symbol if the direction is not yet set."""
         if self.direction == NOT_SET_DIRECTION and top_card.symbol is None:
             self.direction = 1
         elif self.direction == NOT_SET_DIRECTION and top_card.symbol is not None:
@@ -294,6 +353,7 @@ class GameState(BaseModel):
                 self.direction = 1
 
     def initialize_list_card_discard(self) -> None:
+        """Initialize the discard pile with a valid starting card."""
         self.list_card_discard = []
         while True:
             if self.list_card_draw is None:
@@ -313,6 +373,7 @@ class GameState(BaseModel):
 
 
     def __str__(self) -> str:
+        """Return a string representation of the current game state for debugging."""
         if self.idx_player_active is None or self.list_card_discard is None or self.list_player is None:
             raise ValueError()
 
@@ -326,6 +387,7 @@ class GameState(BaseModel):
                 f")")
 
 class Uno(Game):
+    """Represents the UNO game logic, managing the state and player actions."""
 
     def __init__(self) -> None:
         """ Important: Game initialization also requires a 
@@ -377,6 +439,7 @@ class Uno(Game):
         return actions
 
     def _get_list_action_not_specific(self, top_card: Card) -> List[Action]:
+        """Retrieve actions when the topc card has no special symbol."""
         player_state = self.state.get_current_player()
         actions = []
         if not self.state.has_drawn:
@@ -401,6 +464,7 @@ class Uno(Game):
         return actions
 
     def check_with_simple_cards(self, player_state: PlayerState, top_card: Card) -> bool:
+        """Check if the player has a card matching the top card's color or number."""
         has_color_card = False
         for card in player_state.list_card:
             if card.symbol not in ['wild', 'wilddraw4']:
@@ -410,6 +474,7 @@ class Uno(Game):
         return has_color_card
 
     def _get_list_action_specific(self, top_card: Card) -> List[Action]:
+        """"Retrieve the actions when the top card has a special symbol."""
         player_state = self.state.get_current_player()
         actions = []
 
@@ -434,6 +499,7 @@ class Uno(Game):
         return actions
 
     def _get_list_action_specific_wild(self, actions: List[Action], player_state: PlayerState, top_card: Card) -> None:
+        """Handle actions for wild cards."""
         actions.pop()
         for card in player_state.list_card:
             if top_card.color in [card.color, "any", ]:
