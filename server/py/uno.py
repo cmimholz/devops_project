@@ -79,11 +79,16 @@ class Action(BaseModel):
 class PlayerState(BaseModel):
     name: Optional[str] = None  # name of player
     list_card: List[Card] = Field(default_factory=list)  # list of cards
+    score: int =0 # extended attribute
+    last_action: Optional[Action]=None #extended attribute    
 
-    def __str__(self) -> str:   #debug function
+    def __str__(self) -> str:  #debug function
+        """Return a debug string representtaion of a player state."""
         tabs = '\n\t\t\t'
         return (f"\tPlayer(\n"
                 f"\t\tlist_card=\n\t\t\t{tabs.join(map(repr, self.list_card))}"
+                f"\t\tscore={self.score}\n"
+                f"\t\tlast_action={repr(self.last_action)}\n"
                 f"\t)")
 
 
