@@ -6,6 +6,7 @@ from server.py.game import Game, Player
 
 
 class Card(BaseModel):
+    """Represents a single UNO card."""
     color: str = ""               # color of the card (see LIST_COLOR)
     number: Optional[int] = None  # number of the card (if not a symbol card)
     symbol: Optional[str] = None  # special cards (see LIST_SYMBOL)
@@ -48,12 +49,16 @@ class Card(BaseModel):
         return t1 == t2
 
 class Action(BaseModel):
+    """Represents an action a player can take."""
     card: Optional[Card] = None  # the card to play
     color: Optional[str] = None  # the chosen color to play (for wild cards)
     draw: Optional[int] = None   # number of cards to draw for the next player
     uno: bool = False            # announce "UNO" with the second last card
 
     def __lt__(self, other: Union['Action', Any]) -> bool:
+        """ Method checks if one Card object is less than another one,
+                uses global method lt()
+                """
         if not isinstance(other, Action):
             return False
 
@@ -77,13 +82,14 @@ class Action(BaseModel):
         return False
 
 class PlayerState(BaseModel):
+    """Represents the state of a single UNO player."""
     name: Optional[str] = None  # name of player
     list_card: List[Card] = Field(default_factory=list)  # list of cards
     score: int =0 # extended attribute
     last_action: Optional[Action]=None #extended attribute    
 
     def __str__(self) -> str:  #debug function
-        """Return a debug string representtaion of a player state."""
+        """Return a debug string representtaion of the PlayerState."""
         tabs = '\n\t\t\t'
         return (f"\tPlayer(\n"
                 f"\t\tlist_card=\n\t\t\t{tabs.join(map(repr, self.list_card))}"
@@ -93,6 +99,7 @@ class PlayerState(BaseModel):
 
 
 class GamePhase(str, Enum):
+    """Enumerates the different phases of the game."""
     SETUP = 'setup'            # before the game has started
     RUNNING = 'running'        # while the game is running
     FINISHED = 'finished'      # when the game is finished
@@ -168,6 +175,9 @@ LIST_CARD: List[Card] = [
 ]
 
 class GameState(BaseModel):
+    """Represents the overall state of the UNO game, including decks,
+    discard piles, players, and the current game phase.
+    """
     # numbers of cards for each player to start with
     CNT_HAND_CARDS: int = 7
 
@@ -184,6 +194,7 @@ class GameState(BaseModel):
     card_was_used: bool = False
 
     def initialize(self) -> None:
+        """Initialize the game state when the phase is setup."""
         if not self.list_card_draw:
             self.initialize_list_card_draw()
 
@@ -211,11 +222,13 @@ class GameState(BaseModel):
         self.phase = GamePhase.RUNNING
 
     def initialize_has_drawn(self) -> None:
+        """Initialize the has_drawn flag if needed."""
         if self.has_drawn is None:
             self.has_drawn = False
 
 
     def initialize_cnt_to_draw(self, top_card: Card) -> None:
+        """Initialize how many cards the next player must draw, if any."""
         if self.cnt_to_draw == NOT_SET_CNT_TO_DRAW and top_card.symbol is None:
             self.cnt_to_draw = 0
         elif self.cnt_to_draw == NOT_SET_CNT_TO_DRAW and top_card.symbol is not None:
