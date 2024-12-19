@@ -238,6 +238,7 @@ class GameState(BaseModel):
 
 
     def initialize_idx_player(self, top_card: Card) -> None:
+        """Initialize the index of the active player based on the top card."""
         if (self.idx_player_active is None) and (top_card.symbol is None):
             self.idx_player_active = 0
         elif (self.idx_player_active is None) and (top_card.symbol is not None):
@@ -251,13 +252,14 @@ class GameState(BaseModel):
 
 
     def get_current_player(self) -> PlayerState:
+        """Return the currently active player."""
         if self.list_player is None or self.idx_player_active is None:
             raise ValueError()
         return self.list_player[self.idx_player_active]
 
 
     def deal_cards(self) -> None:
-        """Deal cards to each player."""
+        """Deal cards to each player at the start of the game."""
         if self.list_card_draw is None:
             raise ValueError()
         self.list_player = [PlayerState() for i in range(self.cnt_player)]
