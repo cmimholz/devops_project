@@ -402,7 +402,7 @@ class Uno(Game):
             self._get_list_action_specific_reverse(actions, player_state, top_card)
 
         if top_card.symbol == 'draw2':
-            self._get_list_action_specific_draw2(actions, player_state, top_card)
+            self._get_list_action_specific_draw2(actions, player_state)
 
         if top_card.symbol == 'wild':
             self._get_list_action_specific_wild(actions, player_state, top_card)
@@ -420,7 +420,7 @@ class Uno(Game):
                     actions.append(Action(card=card, color=card.color))
                     actions.append(Action(draw=1))
 
-    def _get_list_action_specific_draw2(self, actions: List[Action], player_state: PlayerState, top_card: Card) -> None:
+    def _get_list_action_specific_draw2(self, actions: List[Action], player_state: PlayerState) -> None:
         for card in player_state.list_card:
             if card.symbol == 'draw2':
                 actions.append(Action(card=card, color=card.color, draw=self.state.cnt_to_draw + 2))
@@ -507,17 +507,11 @@ class Uno(Game):
 
 
 class RandomPlayer(Player):
-    def select_action(self, game_state: GameState, actions: List[Action]) -> Optional[Action]:
+    def select_action(self, state: GameState, actions: List[Action]) -> Optional[Action]:
         """ Given masked game state and possible actions, select the next action """
-        if len(actions) > 0 and game_state:
+        if len(actions) > 0 and state:
             return random.choice(actions)
         return None
 
     def game_is_running(self) -> bool:
         return True
-
-if __name__ == '__main__':
-
-    uno = Uno()
-    state = GameState(cnt_player=3)
-    uno.set_state(state)

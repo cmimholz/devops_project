@@ -2,14 +2,18 @@ import sys
 import os
 from server.py.uno import GameState, GamePhase, Uno, LIST_CARD, PlayerState, Card, Action
 
-# Add the root project directory to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 
 def test_create():
     game_state = GameState()
     assert game_state.phase == GamePhase.SETUP
 
+def test_print():
+    game_state = GameState()
+    game = Uno()
+    game.print_state()
+    game.set_state(game_state)
+    game.print_state()
+    assert game_state.phase == GamePhase.RUNNING
 
 def test_initialize():
     game_state = GameState()
@@ -120,8 +124,12 @@ def test_all_special_card():
             Card(color='any', symbol='wild', ),
             [
                 Action(card=Card(color='green', number=1, symbol=None), color='green', draw=None, uno=False),
+                Action(card=None, color=None, draw=1, uno=False),
                 Action(card=Card(color='green', number=2, symbol=None), color='green', draw=None, uno=False),
+                Action(card=None, color=None, draw=1, uno=False),
                 Action(card=Card(color='green', number=3, symbol=None), color='green', draw=None, uno=False),
+                Action(card=None, color=None, draw=1, uno=False)
+
             ]
         ),
         (
@@ -154,7 +162,7 @@ def test_all_special_card():
 
         game.set_state(init_state)
         # print(top_card)
-        # print(game.get_list_action())
+        print(game.get_list_action())
 
         assert sorted(expected_actions) == sorted(game.get_list_action())
 
